@@ -1,10 +1,12 @@
 #ifndef TCP_SERVER_H 
 #define TCP_SERVER_H
 
-#include "BufferedStream.h"
 #include <map>
+#include <list>
+
 #include "ace/SOCK_Acceptor.h"
 #include "ace/Handle_Set.h"
+#include "BufferedStream.h"
 
 
 class ACE_SOCK_Stream; 
@@ -34,9 +36,7 @@ public:
 	
 	virtual int handle_connection( ACE_SOCK_Stream & conn);
 
-
 	virtual int handle_close(ACE_HANDLE handle);
-
 
 	virtual int handle_input(ACE_HANDLE handle, BufferedStreamRefPtr stream) = 0;
 
@@ -51,18 +51,22 @@ public:
 private : 
 	virtual int wait_for_multiple_events () ;
 
-
 	virtual int handle_connections ();
 
 	virtual int handle_pending_write (); 
+	
 	virtual int handle_pending_read () ;
 
 	virtual int handle_input(ACE_HANDLE handle , const char * data, size_t len);
 	
 	void set_write_handles();
 	
+	void close_handles_i();
+
 	void close_handle_i( ACE_HANDLE  handle);
 	
+	void reset_handle_streams(ACE_HANDLE handle );
+
 private:
 	typedef std::map<ACE_HANDLE, BufferedStreamRefPtr> HandleStreamMap; 
 
@@ -83,8 +87,11 @@ private:
 
 	ACE_Recursive_Thread_Mutex mutex_;
 
-	char  * recv_buff_;
+	ACE_Recursive_Thread_Mutex close_mutex_;
 
+	char  * recv_buff_;
+	
+	std::list<ACE_HANDLE> req_close_handles_;
 	bool stop_;
 };
 

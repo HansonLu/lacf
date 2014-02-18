@@ -7,11 +7,9 @@
 #include <string> 
 #include <assert.h>
 
-
 using namespace std; 
 
-
-int TcpServer::open(unsigned short port)
+int TcpServer::open (unsigned short port)
 {
 	ACE_INET_Addr server_addr;
 	int result;
@@ -38,23 +36,25 @@ int TcpServer::open(unsigned short port)
 	return 0;
 };
 
-int TcpServer::handle_connection( ACE_SOCK_Stream & conn) 
+int TcpServer::handle_connection (ACE_SOCK_Stream & conn) 
 {
 	cout << "get a connection. [" <<  conn.get_handle() << "]" <<  endl;
 	return 0;
 }; 
 
-int TcpServer::handle_close(ACE_HANDLE handle) 
+int TcpServer::handle_close (ACE_HANDLE handle) 
 {
 	cout << " connectition [ " << handle << "] is disconnected!" << endl; 
 	return 0;
 }
 
 
-int TcpServer::close(ACE_HANDLE handle) 
+int TcpServer::close (ACE_HANDLE handle) 
 {
-	LockGuard guard(mutex_); 
-	close_handle_i(handle);
+	LockGuard guard(close_mutex_); 
+
+	req_close_handles_.push_back(handle);
+	
 	return 0;
 }
 
@@ -86,6 +86,8 @@ int TcpServer::run ()
 			cerr <<  " handle pending write failed" << endl;
 			return -1;
 		}
+
+		close_handles_i();
 	}
 
 	return 0;
@@ -115,8 +117,6 @@ int TcpServer::send(ACE_HANDLE handle ,const char * data, size_t len)
 
 int TcpServer::wait_for_multiple_events () 
 {
-	LockGuard guard(mutex_); 
-
 	active_read_handles_ = master_handle_set_;
 	int width = (int)active_read_handles_.max_set () + 1;
 	ACE_Time_Value timeout(1);
@@ -141,11 +141,15 @@ int TcpServer::wait_for_multiple_events ()
 
 }
 
+void TcpServer::reset_handle_streams(ACE_HANDLE handle ) 
+{
+	LockGuard guard(mutex_); 
+	read_streams_[handle].reset(new CBufferredStream);
+	write_streams_[handle].reset(new CBufferredStream);
+}
 
 int TcpServer::handle_connections ()
 {
-	LockGuard guard(mutex_); 
-
 	if (active_read_handles_.is_set (acceptor_.get_handle ())) 
 	{
 		ACE_SOCK_Stream peer;
@@ -159,8 +163,7 @@ int TcpServer::handle_connections ()
 
 			peer.enable(ACE_NONBLOCK);
 			master_handle_set_.set_bit(peer.get_handle ());
-			read_streams_[peer.get_handle()].reset(new CBufferredStream);
-			write_streams_[peer.get_handle()].reset(new CBufferredStream);
+			reset_handle_streams(peer.get_handle());
 		}
 
 		// Remove acceptor handle from further consideration.
@@ -173,7 +176,6 @@ int TcpServer::handle_connections ()
 
 int TcpServer::handle_pending_write ()
 {
-
 	LockGuard guard(mutex_); 
 
 	ACE_Handle_Set_Iterator peer_iterator (active_write_handles_);
@@ -210,10 +212,8 @@ int TcpServer::handle_pending_write ()
 			bufstream->skip(rc);
 		}
 
-
 		if (close_handle) 
 		{
-			handle_close(handle);
 			close_handle_i(handle);
 		}
 	}
@@ -224,8 +224,8 @@ int TcpServer::handle_pending_write ()
 
 int TcpServer::handle_pending_read () 
 {
-
-	LockGuard guard(mutex_); 
+	//no need to accuire lock for read
+	//LockGuard guard(mutex_); 
 
 	ACE_Handle_Set_Iterator peer_iterator (active_read_handles_);
 
@@ -265,15 +265,12 @@ int TcpServer::handle_pending_read ()
 
 			if (close_handle) 
 			{
-				handle_close(handle);
 				close_handle_i(handle);
 			}
 	}
 
 	return 0;
 }
-
-
 
 int TcpServer::handle_input(ACE_HANDLE handle , const char * data, size_t len) 
 {
@@ -286,12 +283,12 @@ int TcpServer::handle_input(ACE_HANDLE handle , const char * data, size_t len)
 		return -1;
 	}
 
-
 	return handle_input(handle, read_streams_[handle]);
 }
 
 void TcpServer::set_write_handles()
 {
+	LockGuard guard(mutex_); 
 	active_write_handles_.reset(); // TODO
 	HandleStreamMap::const_iterator it = write_streams_.begin(); 
 	while (it != write_streams_.end())
@@ -305,9 +302,19 @@ void TcpServer::set_write_handles()
 	}
 }
 
+void TcpServer::close_handles_i()
+{
+	LockGuard guard(close_mutex_); 
+	std::list<ACE_HANDLE>::iterator it = req_close_handles_.begin() ;
+	while (it != req_close_handles_.end()) 
+	{
+		close_handle_i(*it);
+		it++;
+	}
+}
+
 void TcpServer::close_handle_i( ACE_HANDLE  handle) 
 {
-
 	ACE_SOCK_Stream stream(handle);
 	cout << " close handle " << handle << endl;
 	master_handle_set_.clr_bit(handle);
@@ -315,4 +322,7 @@ void TcpServer::close_handle_i( ACE_HANDLE  handle)
 	read_streams_.erase(handle);
 	write_streams_.erase(handle);
 	stream.close();
+
+	handle_close(handle);
+	
 }
