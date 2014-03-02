@@ -33,6 +33,15 @@ int TcpServer::open (unsigned short port)
 
     master_handle_set_.set_bit (acceptor_.get_handle ());
     acceptor_.enable (ACE_NONBLOCK);
+
+    int ret = activate();
+
+    if (ret == -1) 
+    {
+        cerr << " start TcpServer port:" << port << " failed!" << endl;
+        return -1;
+    }
+
     return 0;
 };
 
@@ -58,7 +67,7 @@ int TcpServer::close (ACE_HANDLE handle)
     return 0;
 }
 
-int TcpServer::run () 
+int TcpServer::svc () 
 {
     while (!stop_) 
     {
@@ -326,3 +335,11 @@ void TcpServer::close_handle_i( ACE_HANDLE  handle)
     handle_close(handle);
     
 }
+
+int TcpServer::shutdown()
+{
+    stop_ = true;
+    wait();
+    return 0;
+}
+

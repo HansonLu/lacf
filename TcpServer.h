@@ -7,12 +7,11 @@
 #include "ace/SOCK_Acceptor.h"
 #include "ace/Handle_Set.h"
 #include "BufferedStream.h"
-
+#include "ace/Task.h"
 
 class ACE_SOCK_Stream; 
 
-
-class TcpServer 
+class TcpServer :  public ACE_Task_Base
 {
 public: 
     enum { RECV_BUF_SIZE = 1024*1024 }; 
@@ -42,11 +41,13 @@ public:
 
     int close(ACE_HANDLE handle) ;
 
-    
-    int run ();
+    //override
+    int svc (void);
     
     int send(ACE_HANDLE handle ,const char * data, size_t len);
-    
+
+    int shutdown();
+
 
 private : 
     virtual int wait_for_multiple_events () ;
@@ -95,7 +96,5 @@ private:
     bool stop_;
 };
 
+#endif
 
-
-
-#endif 
