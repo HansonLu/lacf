@@ -13,6 +13,7 @@ public:
 	explicit CBufferredStream (size_t max_sz = 1024*1024) 
 	{ 
 		max_sz_ = max_sz;
+        stream_.reserve(100000);
 	}
 
 	int  write(const char * data, size_t len) 
@@ -25,7 +26,7 @@ public:
 			return -1;
 		}
 
-		stream_.insert(stream_.begin (), data, data + len);
+		stream_.insert(stream_.end (), data, data + len);
 		return 0;
 	}
 

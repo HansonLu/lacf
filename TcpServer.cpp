@@ -11,7 +11,6 @@ using namespace std;
 
 int TcpServer::open (unsigned short port)
 {
-    ACE_INET_Addr server_addr;
     int result;
 
     if (port == 0)
@@ -20,10 +19,10 @@ int TcpServer::open (unsigned short port)
         return -1;
     }
 
-    result = server_addr.set (port, (ACE_UINT32) INADDR_ANY);
+    result = server_addr_.set (port, (ACE_UINT32) INADDR_ANY);
     if (result == -1) return -1;
-
-    result =  acceptor_.open (server_addr, 1);
+    
+    result =  acceptor_.open (server_addr_, 1);
 
     if(result == -1) 
     {
@@ -69,35 +68,41 @@ int TcpServer::close (ACE_HANDLE handle)
 
 int TcpServer::svc () 
 {
+    cerr << "TcpServer Task [" <<  server_addr_.get_host_addr() << ": "
+        << server_addr_.get_port_number()<< "] started!" << endl;
+
     while (!stop_) 
     {
         if (wait_for_multiple_events() == -1) 
         {
             cerr << " waing event failed" << endl;
-            return -1;
+            break;
         }
 
         if ( handle_connections() == -1) 
         {
             cerr << " handle connections failed" << endl;
-            return -1;
+            break;
         }
 
         if (handle_pending_read() == -1)
         {
             cerr <<  " handle pending read failed" << endl;
-            return -1;
+            break;
         }
 
 
         if (handle_pending_write() == -1)
         {
             cerr <<  " handle pending write failed" << endl;
-            return -1;
+            break;
         }
 
         close_handles_i();
     }
+
+    cerr << "TcpServer Task [" <<  server_addr_.get_host_addr() << ": "
+        << server_addr_.get_port_number()<< "] exit!" << endl;
 
     return 0;
 }
@@ -339,7 +344,7 @@ void TcpServer::close_handle_i( ACE_HANDLE  handle)
 int TcpServer::shutdown()
 {
     stop_ = true;
-    wait();
+    //wait();
     return 0;
 }
 

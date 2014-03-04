@@ -76,6 +76,8 @@ private:
 
     ACE_SOCK_Acceptor acceptor_; // Socket acceptor endpoint.
 
+    ACE_INET_Addr server_addr_;
+
     ACE_Handle_Set master_handle_set_;
 
     ACE_Handle_Set active_read_handles_;

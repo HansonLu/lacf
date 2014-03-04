@@ -39,7 +39,7 @@ int TcpClient::open ( const char * remote_addr, unsigned short port )
 
     if (ret == -1) 
     {
-        cerr << " start TcpClient addr:" << remote_addr << " port:" << port << " failed!" << endl;
+        cerr << "Start TcpClient  [" << remote_addr_ << ":" << port_<< "]  failed!" << endl;
         return -1;
     }
     return 0;
@@ -47,19 +47,21 @@ int TcpClient::open ( const char * remote_addr, unsigned short port )
 
  int TcpClient::handle_connect()
  {
-     cerr << " TcpClient  addr:" << remote_addr_ << " port:" << port_<< " connected! " << endl;
+     cerr <<"TcpClient connection to [" << remote_addr_ << " :" << port_<< "]  connected! " << endl;
 
      return 0;
  }
 
  int TcpClient::handle_close()
  {
-    cerr << " TcpClient  addr:" << remote_addr_ << " port:" << port_<< " closed! " << endl;
+    cerr << "Tcp Client connection to [" << remote_addr_ << ":" << port_<< "] disconnected! " << endl;
     return 0;
  }
 
 int TcpClient::svc() 
 { 
+    cerr << "Tcp Client Task [" << remote_addr_ << ":" << port_ << "] start!" << endl;
+
     while (!stop_ )
     {
         if (! cli_stream_) 
@@ -75,7 +77,7 @@ int TcpClient::svc()
         if (wait_for_multiple_events() == -1) 
         {
             cerr << " waing event failed" << endl;
-            return -1;
+            break;
         }
 
     }
@@ -84,6 +86,8 @@ int TcpClient::svc()
     {
         close_i();
     }
+
+    cerr << "Tcp Client Task [" << remote_addr_ << ":" << port_ << "] exit!" << endl;
 
     return 0;
 }
@@ -289,7 +293,7 @@ int TcpClient::send(const char * data, size_t len)
 int TcpClient::shutdown()
 {
     stop_ = true;
-    wait();
+    //wait();
     return 0;
 }
 
