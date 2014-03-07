@@ -7,6 +7,8 @@
 #include <string> 
 #include <assert.h>
 
+#include "lock_guard.h"
+
 using namespace std; 
 
 int TcpServer::open (unsigned short port)

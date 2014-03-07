@@ -49,8 +49,7 @@ protected:
     void close_i( );
 
 private :
-    typedef ACE_Guard<ACE_Recursive_Thread_Mutex> LockGuard; 
-
+   
     ACE_SOCK_Stream * cli_stream_;
     const char * remote_addr_;
     unsigned short port_;

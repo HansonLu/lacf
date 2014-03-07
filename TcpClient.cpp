@@ -7,6 +7,7 @@
 #include "ace/SOCK_Stream.h"
 #include "ace/OS_NS_unistd.h"
 #include "ace/Handle_Set.h"
+#include "lock_guard.h"
 
 #include <assert.h>
 #include <iostream> 

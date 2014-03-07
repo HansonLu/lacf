@@ -71,9 +71,6 @@ private :
 private:
     typedef std::map<ACE_HANDLE, BufferedStreamRefPtr> HandleStreamMap; 
 
-    typedef ACE_Guard<ACE_Recursive_Thread_Mutex> LockGuard; 
-
-
     ACE_SOCK_Acceptor acceptor_; // Socket acceptor endpoint.
 
     ACE_INET_Addr server_addr_;

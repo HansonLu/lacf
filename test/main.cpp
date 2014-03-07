@@ -1,4 +1,4 @@
-
+#include "log.h"
 #include "TcpServer.h"
 #include "TcpClient.h"
 #include <iostream> 
@@ -97,12 +97,29 @@ public:
 
 };
 
+
+int test_log() 
+{
+
+   // Logger::instance()->init(Logger::STD);
+
+   // Logger::instance()->log(LL_TRACE, " hello ") ;
+
+    Logger::instance() ->init(Logger::FILESTREAM |Logger::STD,"log_test.txt", 10000);
+
+    for (int i =0 ; i < 10000; i++)
+    {
+        LOG_OS(LL_TRACE, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    }
+     
+
+    return 0;
+}
 int
     ACE_TMAIN (int argc, ACE_TCHAR *argv[])
 {
-    //TelnetServer server; 
-
-    //server.open(9999); 
+    test_log();
+    
     TestTcpServer server;
 
     int rc= server.open(9999);
