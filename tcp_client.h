@@ -1,7 +1,7 @@
 #ifndef TCP_CLIENT_H 
 #define TCP_CLIENT_H 
 
-#include "BufferedStream.h"
+#include "buffered_stream.h"
 #include "ace/Task.h"
 
 

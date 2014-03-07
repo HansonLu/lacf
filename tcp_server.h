@@ -6,7 +6,7 @@
 
 #include "ace/SOCK_Acceptor.h"
 #include "ace/Handle_Set.h"
-#include "BufferedStream.h"
+#include "buffered_stream.h"
 #include "ace/Task.h"
 
 class ACE_SOCK_Stream; 

@@ -132,7 +132,7 @@ int Logger::log(LogPriority pri, const std::string & content)
 
     string log_rec = get_log_rec(pri, content) ;
 
-    if (flag_ | STD) 
+    if (flag_ & STD) 
     {
         cout << log_rec;
     }

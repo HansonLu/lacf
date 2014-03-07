@@ -1,6 +1,6 @@
 #include "log.h"
-#include "TcpServer.h"
-#include "TcpClient.h"
+#include "tcp_server.h"
+#include "tcp_client.h"
 #include <iostream> 
 
 using namespace std; 
@@ -105,7 +105,7 @@ int test_log()
 
    // Logger::instance()->log(LL_TRACE, " hello ") ;
 
-    Logger::instance() ->init(Logger::FILESTREAM |Logger::STD,"log_test.txt", 10000);
+    Logger::instance() ->init(Logger::FILESTREAM ,"log_test.txt", 1000);
 
     for (int i =0 ; i < 10000; i++)
     {
