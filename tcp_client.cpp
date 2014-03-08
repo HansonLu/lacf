@@ -1,4 +1,8 @@
 #include "tcp_client.h"
+
+#include <assert.h>
+#include <iostream> 
+
 #include "ace/OS.h"
 #include "ace/ACE.h"
 #include "ace/Time_Value.h"
@@ -7,12 +11,13 @@
 #include "ace/SOCK_Stream.h"
 #include "ace/OS_NS_unistd.h"
 #include "ace/Handle_Set.h"
-#include "lock_guard.h"
 
-#include <assert.h>
-#include <iostream> 
+#include "lock_guard.h"
+#include "log.h"
+
 
 using namespace std; 
+
 
 TcpClient::TcpClient() 
     :cli_stream_(0),
@@ -31,6 +36,13 @@ TcpClient::~TcpClient()
 
 }  
 
+const std::string TcpClient::name() 
+{
+    ostringstream ss;
+    ss << "[Tcp client task]" << "[" <<  this << "]";
+    return ss.str();
+}
+
 int TcpClient::open ( const char * remote_addr, unsigned short port ) 
 {
     assert(remote_addr);
@@ -40,28 +52,29 @@ int TcpClient::open ( const char * remote_addr, unsigned short port )
 
     if (ret == -1) 
     {
-        cerr << "Start TcpClient  [" << remote_addr_ << ":" << port_<< "]  failed!" << endl;
+        LOG_ERROR_OS( name()  <<  "start task failed. remote [" << remote_addr <<":" << port <<"] !");
         return -1;
     }
+   
     return 0;
 }
 
  int TcpClient::handle_connect()
  {
-     cerr <<"TcpClient connection to [" << remote_addr_ << " :" << port_<< "]  connected! " << endl;
+     LOG_DEBUG_OS (name() <<   "connected! ");
 
      return 0;
  }
 
  int TcpClient::handle_close()
  {
-    cerr << "Tcp Client connection to [" << remote_addr_ << ":" << port_<< "] disconnected! " << endl;
+    LOG_DEBUG_OS( name()  <<  " disconnected! ");
     return 0;
  }
 
 int TcpClient::svc() 
 { 
-    cerr << "Tcp Client Task [" << remote_addr_ << ":" << port_ << "] start!" << endl;
+    LOG_TRACE_OS (name () << " start...! remote = [ " << remote_addr_ << ":" << port_ <<"] !");
 
     while (!stop_ )
     {
@@ -69,7 +82,6 @@ int TcpClient::svc()
         {
             if (connect_server() != 0) 
             {
-                cerr << " connect to server failed" << endl;
                 ACE_OS::sleep(10);
                 continue;
             }
@@ -77,10 +89,9 @@ int TcpClient::svc()
 
         if (wait_for_multiple_events() == -1) 
         {
-            cerr << " waing event failed" << endl;
+            LOG_ERROR_OS(name() <<  "waing event failed!");
             break;
         }
-
     }
 
     if (cli_stream_)
@@ -88,7 +99,7 @@ int TcpClient::svc()
         close_i();
     }
 
-    cerr << "Tcp Client Task [" << remote_addr_ << ":" << port_ << "] exit!" << endl;
+    LOG_TRACE_OS ( name() <<   " exit!");
 
     return 0;
 }
@@ -107,13 +118,13 @@ int TcpClient::connect_server()
         server_addr,
         &timeout) == -1)
     {
-        cerr << " connect to server failed " << endl; 
+        LOG_DEBUG_OS( name() <<  "connect to server failed! "); 
         delete cli_stream_;
         cli_stream_ = 0;
         return -1;
     }
 
-    cerr << " connect to server ok " << cli_stream_->get_handle() << endl;
+    LOG_DEBUG_OS (name() <<   " connect to server  ok! ");
     cli_stream_->enable(ACE_NONBLOCK);
 
     read_stream_.reset(new CBufferredStream);
@@ -147,19 +158,19 @@ int TcpClient::wait_for_multiple_events ()
 
     if (rc  < 0 && errno != EWOULDBLOCK) // no timeout
     {
-        cerr <<  " select error " << errno << endl;
+        LOG_ERROR_OS (name() <<  " select failed. error: " << errno) ;
         return -1;
     }
 
     if (handle_pending_read(active_read_handles) == -1)
     {
-        cerr <<  " handle pending read failed" << endl;
+        LOG_ERROR_OS (name() <<   " handle pending read failed!");
         return -1;
     }
 
     if (handle_pending_write(active_write_handles_) == -1)
     {
-        cerr <<  " handle pending write failed" << endl;
+       LOG_ERROR_OS(name() <<   " handle pending write failed!");
         return -1;
     }
     //TODO
@@ -181,18 +192,19 @@ int TcpClient::handle_pending_read (ACE_Handle_Set & active_read_handles)
     {
         if ( errno != EWOULDBLOCK)
         {
-            cerr << "recv failed. errno = " << errno<< endl;
+            LOG_ERROR_OS( name() <<  " recv failed. errno = " << errno ) ;
             close_handle = true;
         }
     }
     else if (rc == 0 ) 
     {
-        cerr<< " recv rc == 0" << endl;
+        //socket is closed
+        LOG_DEBUG_OS (name() <<  " recv  failed. rc == 0" );
         close_handle = true;
     }
     else if (rc > RECV_BUF_SIZE) 
     {
-        cerr << " invalid len. len = %d" << rc << endl; 
+        LOG_ERROR_OS( name() <<  " recv return a invalid len. len =" << rc ); 
         close_handle = true;
     }
     else
@@ -211,7 +223,6 @@ int TcpClient::handle_pending_read (ACE_Handle_Set & active_read_handles)
     return 0;
 }
 
-
 int TcpClient::handle_input( const char * data, size_t len) 
 {
     assert(data);
@@ -221,7 +232,7 @@ int TcpClient::handle_input( const char * data, size_t len)
     int rc =  read_stream_->write(data ,len ) ;
     if (rc != 0) 
     {
-        cerr << "client buffered stream is overlfow! handle !" << endl;
+        LOG_ERROR_OS( name() <<  " input buffered stream is overlfow!  !");
         return -1;
     }
 
@@ -241,7 +252,7 @@ int TcpClient::handle_pending_write (ACE_Handle_Set & active_write_handles)
     
     if (!write_stream_.get() || write_stream_->empty())
     {
-        cerr << " handle write while stream is closed or  empty. handle "  <<  endl;
+         LOG_ERROR_OS(name() <<  " write stream is closed or  empty.");
         return 0;
     }
 
@@ -250,13 +261,13 @@ int TcpClient::handle_pending_write (ACE_Handle_Set & active_write_handles)
     {
         if ( errno != EWOULDBLOCK)
         {
-            cerr << "recv failed. errno = " << errno<< endl;
+            LOG_ERROR_OS (name() << "send failed. errno = " << errno );
             close_handle = true;
         }
     }
     else if (rc == 0 ) 
     {
-        cerr<< " recv rc == 0" << endl;
+        LOG_DEBUG_OS (name() <<  " send failed. rc == 0" );
         close_handle = true;
     }
     else  
@@ -277,14 +288,14 @@ int TcpClient::send(const char * data, size_t len)
     LockGuard guard(mutex_); 
     if (write_stream_.get() == 0)
     {
-        cerr << " connection not exist!" << endl;
+        LOG_ERROR_OS (name() <<   "connection not exist!" );
         return -1;
     }
 
     int rc =  write_stream_->write(data, len);
     if (rc != 0)
     {
-        cerr  << " buffered stream is overflow ! handle = "  << endl;
+        LOG_ERROR_OS (name() <<   "write stream is overflow !");
         return -1;
     }
 
@@ -310,3 +321,4 @@ void TcpClient::close_i( )
 
     handle_close();
 }
+ 

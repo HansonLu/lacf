@@ -16,22 +16,10 @@ class TcpServer :  public ACE_Task_Base
 public: 
     enum { RECV_BUF_SIZE = 1024*1024 }; 
 
-    TcpServer() 
-        : stop_(false)
-    {
-        recv_buff_ = new char [RECV_BUF_SIZE];
-    }
-
-    ~TcpServer()
-    {
-        if (recv_buff_) 
-        {
-            delete [] recv_buff_;
-            recv_buff_ = 0;
-        }
-    }
-
-    int open(unsigned short port);
+    TcpServer();
+    virtual ~TcpServer();
+  
+    int open (const char * addr);
     
     virtual int handle_connection( ACE_SOCK_Stream & conn);
 
@@ -48,6 +36,7 @@ public:
 
     int shutdown();
 
+    const std::string name(); 
 
 private : 
     virtual int wait_for_multiple_events () ;
@@ -74,6 +63,8 @@ private:
     ACE_SOCK_Acceptor acceptor_; // Socket acceptor endpoint.
 
     ACE_INET_Addr server_addr_;
+    std::string   server_addr_s_;
+
 
     ACE_Handle_Set master_handle_set_;
 

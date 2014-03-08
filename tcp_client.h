@@ -14,7 +14,8 @@ public :
     enum { RECV_BUF_SIZE = 1024*1024 }; 
 
     TcpClient() ;
-    ~TcpClient() ;
+
+    virtual ~TcpClient() ;
 
     int open ( const char * server_ip , unsigned short port) ;
 
@@ -32,8 +33,9 @@ public :
     virtual int handle_close() ;
 
     int send(const char * data, size_t len) ;
-
-
+  
+    const std::string name();
+   
 protected: 
 
     int check_connect();

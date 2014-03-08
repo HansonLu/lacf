@@ -118,11 +118,11 @@ int test_log()
 int
     ACE_TMAIN (int argc, ACE_TCHAR *argv[])
 {
-    test_log();
+     // test_log();
     
     TestTcpServer server;
 
-    int rc= server.open(9999);
+    int rc= server.open("9999");
     assert (rc == 0);
     TestTcpClient client; 
 
@@ -157,7 +157,7 @@ int
 
     char buf[PACKET_SIZE] = {'a'};
 
-    const int SEND_TIMES = 100000;
+    const int SEND_TIMES = 100;
     for (int i= 0; i< SEND_TIMES; i++)
     {
         rc = client.send(buf ,sizeof(buf));

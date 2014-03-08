@@ -75,5 +75,10 @@ private:
        }\
   }while(0);
 
+#define LOG_TRACE_OS(X) LOG_OS(LL_TRACE, X)
+#define LOG_DEBUG_OS(X) LOG_OS(LL_DEBUG, X)
+#define LOG_INFO_OS(X)  LOG_OS(LL_INFO, X)
+#define LOG_ERROR_OS(X) LOG_OS(LL_ERROR, X)
+     
 #endif 
 

@@ -33,7 +33,7 @@ void Logger::set_priority( LogPriority pri)
 
 bool Logger::is_pri_enabled(LogPriority pri) const 
 {
-    return (pri <= priority_);
+    return (pri >= priority_);
 }
 
 int Logger::init (int flag, const char * log_file , size_t max_filesize)
