@@ -6,8 +6,9 @@
 
 #include "ace/SOCK_Acceptor.h"
 #include "ace/Handle_Set.h"
-#include "buffered_stream.h"
 #include "ace/Task.h"
+
+#include "tcp_channel.h"
 
 class ACE_SOCK_Stream; 
 
@@ -18,9 +19,9 @@ public:
 
     TcpServer();
     virtual ~TcpServer();
-  
+
     int open (const char * addr);
-    
+
     virtual int handle_connection( ACE_SOCK_Stream & conn);
 
     virtual int handle_close(ACE_HANDLE handle);
@@ -31,7 +32,7 @@ public:
 
     //override
     int svc (void);
-    
+
     int send(ACE_HANDLE handle ,const char * data, size_t len);
 
     int shutdown();
@@ -44,21 +45,24 @@ private :
     virtual int handle_connections ();
 
     virtual int handle_pending_write (); 
-    
+
     virtual int handle_pending_read () ;
 
     virtual int handle_input(ACE_HANDLE handle , const char * data, size_t len);
-    
+
     void set_write_handles();
-    
+
     void close_handles_i();
 
     void close_handle_i( ACE_HANDLE  handle);
-    
+
     void reset_handle_streams(ACE_HANDLE handle );
 
 private:
-    typedef std::map<ACE_HANDLE, BufferedStreamRefPtr> HandleStreamMap; 
+    // typedef std::map<ACE_HANDLE, BufferedStreamRefPtr> HandleStreamMap; 
+
+    typedef std::map<ACE_HANDLE, TcpChannelRefPtr>TcpChannelMap; 
+
 
     ACE_SOCK_Acceptor acceptor_; // Socket acceptor endpoint.
 
@@ -72,16 +76,18 @@ private:
 
     ACE_Handle_Set active_write_handles_;
 
-    HandleStreamMap read_streams_;
+    TcpChannelMap  channels_;
 
-    HandleStreamMap  write_streams_;
+    //HandleStreamMap read_streams_;
+
+    //HandleStreamMap  write_streams_;
 
     ACE_Recursive_Thread_Mutex mutex_;
 
     ACE_Recursive_Thread_Mutex close_mutex_;
 
     char  * recv_buff_;
-    
+
     std::list<ACE_HANDLE> req_close_handles_;
     bool stop_;
 };

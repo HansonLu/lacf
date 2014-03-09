@@ -1,9 +1,9 @@
 #ifndef TCP_CLIENT_H 
 #define TCP_CLIENT_H 
 
-#include "buffered_stream.h"
 #include "ace/Task.h"
 
+#include "tcp_channel.h"
 
 class ACE_SOCK_Stream;
 class ACE_Handle_Set;
@@ -51,13 +51,14 @@ protected:
     void close_i( );
 
 private :
-   
     ACE_SOCK_Stream * cli_stream_;
+
     const char * remote_addr_;
+
     unsigned short port_;
 
-    BufferedStreamRefPtr read_stream_; 
-    BufferedStreamRefPtr write_stream_;
+    TcpChannelRefPtr  channel_; 
+
     bool stop_;
 
     char  * recv_buff_;

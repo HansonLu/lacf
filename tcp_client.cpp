@@ -14,15 +14,12 @@
 
 #include "lock_guard.h"
 #include "log.h"
-#include "tcp_connection.h"
-
 
 using namespace std; 
 
-
 TcpClient::TcpClient() 
     :cli_stream_(0),
-     stop_(false)
+    stop_(false)
 {
     recv_buff_ = new char [RECV_BUF_SIZE];
 }
@@ -56,22 +53,22 @@ int TcpClient::open ( const char * remote_addr, unsigned short port )
         LOG_ERROR_OS( name()  <<  "start task failed. remote [" << remote_addr <<":" << port <<"] !");
         return -1;
     }
-   
+
     return 0;
 }
 
- int TcpClient::handle_connect()
- {
-     LOG_DEBUG_OS (name() <<   "connected! ");
+int TcpClient::handle_connect()
+{
+    LOG_DEBUG_OS (name() <<   " connected! ");
 
-     return 0;
- }
+    return 0;
+}
 
- int TcpClient::handle_close()
- {
+int TcpClient::handle_close()
+{
     LOG_DEBUG_OS( name()  <<  " disconnected! ");
     return 0;
- }
+}
 
 int TcpClient::svc() 
 { 
@@ -128,9 +125,7 @@ int TcpClient::connect_server()
     LOG_DEBUG_OS (name() <<   " connect to server  ok! ");
     cli_stream_->enable(ACE_NONBLOCK);
 
-    read_stream_.reset(new CBufferredStream);
-    write_stream_.reset(new CBufferredStream);
-
+    channel_.reset(new TcpChannel(cli_stream_->get_handle()));
 
     (void ) handle_connect();
 
@@ -144,7 +139,7 @@ int TcpClient::wait_for_multiple_events ()
 
     int width = (int)active_read_handles.max_set () + 1;
 
-    if (write_stream_.get() !=0 && !write_stream_->empty())
+    if ( channel_.get() && !channel_->write_stream()->empty())
     {
         active_write_handles_.set_bit(cli_stream_->get_handle());
     }
@@ -171,7 +166,7 @@ int TcpClient::wait_for_multiple_events ()
 
     if (handle_pending_write(active_write_handles_) == -1)
     {
-       LOG_ERROR_OS(name() <<   " handle pending write failed!");
+        LOG_ERROR_OS(name() <<   " handle pending write failed!");
         return -1;
     }
     //TODO
@@ -187,8 +182,7 @@ int TcpClient::handle_pending_read (ACE_Handle_Set & active_read_handles)
         return 0;
     }
 
-    TcpConnection conn(cli_stream_->get_handle());
-    int rc = conn.recv(recv_buff_, RECV_BUF_SIZE);
+    int rc = channel_->recv(recv_buff_, RECV_BUF_SIZE);
     if (rc < 0) 
     {
         close_i();
@@ -198,10 +192,10 @@ int TcpClient::handle_pending_read (ACE_Handle_Set & active_read_handles)
         int r = handle_input(recv_buff_, rc);
         if (r != 0) 
         {
-             close_i();
+            close_i();
         }
     }
-    
+
     return 0;
 }
 
@@ -209,16 +203,16 @@ int TcpClient::handle_input( const char * data, size_t len)
 {
     assert(data);
     assert(len > 0);
-    assert(read_stream_.get());
+    assert(channel_.get());
 
-    int rc =  read_stream_->write(data ,len ) ;
+    int rc =  channel_->handle_input(data, len ) ;
     if (rc != 0) 
     {
         LOG_ERROR_OS( name() <<  " input buffered stream is overlfow!  !");
         return -1;
     }
 
-    return handle_input(read_stream_);
+    return handle_input(channel_->read_stream());
 }
 
 int TcpClient::handle_pending_write (ACE_Handle_Set & active_write_handles)
@@ -230,48 +224,36 @@ int TcpClient::handle_pending_write (ACE_Handle_Set & active_write_handles)
         return 0;
     }
 
-    bool close_handle = false;
-    
-    if (!write_stream_.get() || write_stream_->empty())
+    if (!channel_.get())
     {
-         LOG_ERROR_OS(name() <<  " write stream is closed or  empty.");
+        LOG_ERROR_OS(name() <<  " write stream is closed.");
         return 0;
     }
 
-    TcpConnection conn(cli_stream_->get_handle());
-
-
-    int rc = conn.send(write_stream_->data(), write_stream_->size());
-
+    int rc = channel_->handle_write();
     if (rc < 0) 
     {
-       close_i();
+        close_i();
     }
-    else if (rc >0 ) 
-    {
-        write_stream_->skip(rc);
-    }
-    // rc ==0 mean send would block
-
+    
     return 0;
 }
 
 int TcpClient::send(const char * data, size_t len) 
 {
     LockGuard guard(mutex_); 
-    if (write_stream_.get() == 0)
+    if ( !channel_.get() )
     {
         LOG_ERROR_OS (name() <<   "connection not exist!" );
         return -1;
     }
 
-    int rc =  write_stream_->write(data, len);
+    int rc =  channel_->send_write(data, len);
     if (rc != 0)
     {
         LOG_ERROR_OS (name() <<   "write stream is overflow !");
         return -1;
     }
-
     return 0;
 }
 
@@ -284,9 +266,7 @@ int TcpClient::shutdown()
 
 void TcpClient::close_i( ) 
 {
-    read_stream_.reset(0);
-    write_stream_.reset(0);
-
+    channel_.reset(0);
     cli_stream_->close();
 
     delete cli_stream_; 
@@ -294,4 +274,4 @@ void TcpClient::close_i( )
 
     handle_close();
 }
- 
+
