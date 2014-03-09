@@ -70,7 +70,7 @@ private:
       if (Logger::instance()->is_pri_enabled(L)) \
       {  \
            std::ostringstream ss;  \
-           ss << X << endl;\
+           ss << X << std::endl;\
            Logger::instance()->log(L, ss.str()); \
        }\
   }while(0);

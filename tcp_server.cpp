@@ -11,6 +11,7 @@
 
 #include "lock_guard.h"
 #include "log.h"
+#include "tcp_connection.h" 
 
 using namespace std; 
 
@@ -48,7 +49,8 @@ int TcpServer::open (const char * addr)
 		LOG_ERROR_OS( name() << " invalid addr  " << addr  );
 		return -1;
 	}
-	
+
+	//reuse = 1
 	result =  acceptor_.open (server_addr_, 1);
 
 	if(result == -1) 
@@ -234,24 +236,17 @@ int TcpServer::handle_pending_write ()
 			continue;
 		}
 
-		int rc = sockstream.send(bufstream->data(), bufstream->size());
-		if (rc < 0 ) 
-		{
-			if ( errno != EWOULDBLOCK)
-			{
-				LOG_ERROR_OS( name() << "recv failed. errno = " << errno);
-				close_handle = true;
-			}
-		}
-		else if (rc == 0 ) 
-		{
-			cerr<< " recv rc == 0" << endl;
-			close_handle = true;
-		}
-		else  
-		{
-			bufstream->skip(rc);
-		}
+        TcpConnection conn(handle);
+        int rc = conn.send(bufstream->data(), bufstream->size());
+
+        if (rc < 0) 
+        {
+            close_handle_i(handle);
+        }
+        else if (rc  >0 ) 
+        {
+            bufstream->skip(rc);
+	    }
 
 		if (close_handle) 
 		{
@@ -273,41 +268,22 @@ int TcpServer::handle_pending_read ()
 	for (ACE_HANDLE handle;
 		(handle = peer_iterator ()) != ACE_INVALID_HANDLE;
 		) {
-			bool close_handle = false;
-			ACE_SOCK_Stream stream (handle);
+            TcpConnection conn(handle);
+            int rc = conn.recv (recv_buff_, RECV_BUF_SIZE);
 
-			int rc = stream.recv(recv_buff_, RECV_BUF_SIZE);
-			if (rc < 0) 
-			{
-				if ( errno != EWOULDBLOCK)
-				{
-					LOG_ERROR_OS( name() <<  "recv failed. errno = " << errno);
-					close_handle = true;
-				}
-			}
-			else if (rc == 0 ) 
-			{
-				LOG_ERROR_OS( name() << "recv rc == 0" );
-				close_handle = true;
-			}
-			else if (rc > RECV_BUF_SIZE) 
-			{
-				LOG_ERROR_OS( name() <<  " recv return invalid len. len = " << rc ); 
-				close_handle = true;
-			}
-			else
-			{
-				int r = handle_input(handle, recv_buff_, rc);
+            if (rc < 0) 
+            {
+               	close_handle_i(handle);
+            }
+            else if (rc > 0 ) 
+            {
+                int r = handle_input(handle, recv_buff_, rc);
 				if (r != 0) 
 				{
-					close_handle =true;
+					close_handle_i(handle);
 				}
-			}
-
-			if (close_handle) 
-			{
-				close_handle_i(handle);
-			}
+            }
+            // rc == 0 mean  recv return wouldblock
 	}
 
 	return 0;

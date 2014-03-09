@@ -14,6 +14,7 @@
 
 #include "lock_guard.h"
 #include "log.h"
+#include "tcp_connection.h"
 
 
 using namespace std; 
@@ -186,40 +187,21 @@ int TcpClient::handle_pending_read (ACE_Handle_Set & active_read_handles)
         return 0;
     }
 
-    bool close_handle = false;
-    int rc = cli_stream_->recv(recv_buff_, RECV_BUF_SIZE);
+    TcpConnection conn(cli_stream_->get_handle());
+    int rc = conn.recv(recv_buff_, RECV_BUF_SIZE);
     if (rc < 0) 
     {
-        if ( errno != EWOULDBLOCK)
-        {
-            LOG_ERROR_OS( name() <<  " recv failed. errno = " << errno ) ;
-            close_handle = true;
-        }
-    }
-    else if (rc == 0 ) 
-    {
-        //socket is closed
-        LOG_DEBUG_OS (name() <<  " recv  failed. rc == 0" );
-        close_handle = true;
-    }
-    else if (rc > RECV_BUF_SIZE) 
-    {
-        LOG_ERROR_OS( name() <<  " recv return a invalid len. len =" << rc ); 
-        close_handle = true;
-    }
-    else
+        close_i();
+    } 
+    else if (rc >0 )
     {
         int r = handle_input(recv_buff_, rc);
         if (r != 0) 
         {
-            close_handle =true;
+             close_i();
         }
     }
-
-    if (close_handle) 
-    {
-        close_i();
-    }
+    
     return 0;
 }
 
@@ -256,29 +238,20 @@ int TcpClient::handle_pending_write (ACE_Handle_Set & active_write_handles)
         return 0;
     }
 
-    int rc = cli_stream_->send(write_stream_->data(), write_stream_->size());
-    if (rc < 0 ) 
+    TcpConnection conn(cli_stream_->get_handle());
+
+
+    int rc = conn.send(write_stream_->data(), write_stream_->size());
+
+    if (rc < 0) 
     {
-        if ( errno != EWOULDBLOCK)
-        {
-            LOG_ERROR_OS (name() << "send failed. errno = " << errno );
-            close_handle = true;
-        }
+       close_i();
     }
-    else if (rc == 0 ) 
-    {
-        LOG_DEBUG_OS (name() <<  " send failed. rc == 0" );
-        close_handle = true;
-    }
-    else  
+    else if (rc >0 ) 
     {
         write_stream_->skip(rc);
     }
-
-    if (close_handle) 
-    {
-        close_i();
-    }
+    // rc ==0 mean send would block
 
     return 0;
 }
