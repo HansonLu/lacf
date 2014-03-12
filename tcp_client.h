@@ -51,8 +51,6 @@ protected:
     void close_i( );
 
 private :
-    ACE_SOCK_Stream * cli_stream_;
-
     const char * remote_addr_;
 
     unsigned short port_;

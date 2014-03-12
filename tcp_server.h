@@ -59,16 +59,13 @@ private :
     void reset_handle_streams(ACE_HANDLE handle );
 
 private:
-    // typedef std::map<ACE_HANDLE, BufferedStreamRefPtr> HandleStreamMap; 
-
     typedef std::map<ACE_HANDLE, TcpChannelRefPtr>TcpChannelMap; 
-
 
     ACE_SOCK_Acceptor acceptor_; // Socket acceptor endpoint.
 
     ACE_INET_Addr server_addr_;
-    std::string   server_addr_s_;
 
+    std::string   server_addr_s_;
 
     ACE_Handle_Set master_handle_set_;
 
@@ -77,10 +74,6 @@ private:
     ACE_Handle_Set active_write_handles_;
 
     TcpChannelMap  channels_;
-
-    //HandleStreamMap read_streams_;
-
-    //HandleStreamMap  write_streams_;
 
     ACE_Recursive_Thread_Mutex mutex_;
 

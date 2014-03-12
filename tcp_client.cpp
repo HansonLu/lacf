@@ -18,8 +18,7 @@
 using namespace std; 
 
 TcpClient::TcpClient() 
-    :cli_stream_(0),
-    stop_(false)
+    : stop_(false)
 {
     recv_buff_ = new char [RECV_BUF_SIZE];
 }
@@ -31,7 +30,6 @@ TcpClient::~TcpClient()
         delete [] recv_buff_;
         recv_buff_ = 0;
     }
-
 }  
 
 const std::string TcpClient::name() 
@@ -76,7 +74,7 @@ int TcpClient::svc()
 
     while (!stop_ )
     {
-        if (! cli_stream_) 
+        if (! channel_.get()) 
         {
             if (connect_server() != 0) 
             {
@@ -92,7 +90,7 @@ int TcpClient::svc()
         }
     }
 
-    if (cli_stream_)
+    if (channel_.get())
     {
         close_i();
     }
@@ -104,28 +102,25 @@ int TcpClient::svc()
 
 int TcpClient::connect_server()
 {
-    assert(cli_stream_ == 0);
+    ACE_SOCK_Stream cli_stream;
 
-    cli_stream_ = new ACE_SOCK_Stream();
     ACE_INET_Addr server_addr(port_, remote_addr_);
     ACE_SOCK_Connector con;
 
     ACE_Time_Value timeout (30);
 
-    if (con.connect (*cli_stream_,
+    if (con.connect (cli_stream,
         server_addr,
         &timeout) == -1)
     {
         LOG_DEBUG_OS( name() <<  "connect to server failed! "); 
-        delete cli_stream_;
-        cli_stream_ = 0;
         return -1;
     }
 
-    LOG_DEBUG_OS (name() <<   " connect to server  ok! ");
-    cli_stream_->enable(ACE_NONBLOCK);
+    LOG_DEBUG_OS (name() <<   "  connect to server  ok! ");
+    cli_stream.enable(ACE_NONBLOCK);
 
-    channel_.reset(new TcpChannel(cli_stream_->get_handle()));
+    channel_.reset(new TcpChannel(cli_stream.get_handle()));
 
     (void ) handle_connect();
 
@@ -133,15 +128,16 @@ int TcpClient::connect_server()
 }
 
 int TcpClient::wait_for_multiple_events () 
-{
+{   
     ACE_Handle_Set active_read_handles,active_write_handles_;
-    active_read_handles.set_bit(cli_stream_->get_handle());
+    assert(channel_.get());
+    active_read_handles.set_bit(channel_->get_handle());
 
     int width = (int)active_read_handles.max_set () + 1;
 
     if ( channel_.get() && !channel_->write_stream()->empty())
     {
-        active_write_handles_.set_bit(cli_stream_->get_handle());
+        active_write_handles_.set_bit(channel_->get_handle());
     }
 
     ACE_Time_Value timeout(1);
@@ -177,7 +173,8 @@ int TcpClient::wait_for_multiple_events ()
 
 int TcpClient::handle_pending_read (ACE_Handle_Set & active_read_handles) 
 {
-    if ( ! active_read_handles.is_set(cli_stream_->get_handle()) )
+    assert(channel_.get());
+    if ( ! active_read_handles.is_set(channel_->get_handle()) )
     {
         return 0;
     }
@@ -219,7 +216,13 @@ int TcpClient::handle_pending_write (ACE_Handle_Set & active_write_handles)
 {
     LockGuard guard(mutex_); 
 
-    if (!active_write_handles.is_set(cli_stream_->get_handle()))
+    if ( !channel_.get()) 
+    {
+         LOG_ERROR_OS(name() <<  " channel is closed.");
+         return 0;
+    }
+
+    if (!active_write_handles.is_set(channel_->get_handle()))
     {
         return 0;
     }
@@ -235,7 +238,7 @@ int TcpClient::handle_pending_write (ACE_Handle_Set & active_write_handles)
     {
         close_i();
     }
-    
+
     return 0;
 }
 
@@ -265,12 +268,10 @@ int TcpClient::shutdown()
 }
 
 void TcpClient::close_i( ) 
-{
-    channel_.reset(0);
-    cli_stream_->close();
+{ 
+    channel_->close();
 
-    delete cli_stream_; 
-    cli_stream_ = 0;
+    channel_.reset(0);
 
     handle_close();
 }

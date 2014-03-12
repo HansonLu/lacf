@@ -206,7 +206,7 @@ int TcpServer::handle_pending_read ()
 
             if (!channel.get())
             {
-                LOG_ERROR_OS( name() << " write stream is closed. handle = " << handle);
+                LOG_ERROR_OS( name() << " channel is closed. handle = " << handle);
                 continue;
             }
 
@@ -238,7 +238,7 @@ int TcpServer::handle_input(ACE_HANDLE handle , const char * data, size_t len)
     TcpChannelRefPtr channel = channels_[handle];
     if (!channel.get())
     {
-        LOG_ERROR_OS( name() << " write stream is closed. handle = " << handle);
+        LOG_ERROR_OS( name() << " channel is closed. handle = " << handle);
         return -1;
     }
     
@@ -263,13 +263,10 @@ int TcpServer::handle_pending_write ()
         (handle = peer_iterator ()) != ACE_INVALID_HANDLE;
         ) 
     {
-        ACE_SOCK_Stream sockstream (handle);
-
         TcpChannelRefPtr channel = channels_[handle];
-
         if (!channel.get())
         {
-            LOG_ERROR_OS( name() << " write stream is closed. handle = " << handle);
+            LOG_ERROR_OS( name() << " channel is closed. handle = " << handle);
             continue;
         }
 
@@ -293,7 +290,7 @@ int TcpServer::send(ACE_HANDLE handle ,const char * data, size_t len)
 
     if (!channel.get())
     {
-        LOG_ERROR_OS( name() << " write stream is closed. handle = " << handle);
+        LOG_ERROR_OS( name() << " channel is closed. handle = " << handle);
         return -1;		
     }
 
@@ -317,7 +314,7 @@ void TcpServer::set_write_handles()
         TcpChannelRefPtr channel = it->second;
         if (!channel.get()) 
         {
-            LOG_ERROR_OS( name() << " write stream is closed. handle = " << it->first);
+            LOG_ERROR_OS( name() << "channel is closed. handle = " << it->first);
             continue;
         }
         if (!channel->write_stream()->empty())
@@ -342,11 +339,19 @@ void TcpServer::close_handles_i()
 
 void TcpServer::close_handle_i( ACE_HANDLE  handle) 
 {
-    ACE_SOCK_Stream stream(handle);
     LOG_DEBUG_OS (" close handle [" << handle << "].");
+    
+    TcpChannelRefPtr channel = channels_[handle];
+
+    if (!channel.get())
+    {
+        LOG_ERROR_OS( name() << " channel is closed. handle = " << handle);
+        return ;		
+    }
+
+    channel->close();
     //active_read_handles_.clr_bit(handle);
     channels_.erase(handle);
-    stream.close();
     handle_close(handle);
 }
 

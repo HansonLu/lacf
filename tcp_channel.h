@@ -13,24 +13,23 @@ class TcpChannel
 { 
 public:
     explicit TcpChannel ( ACE_HANDLE handle) 
-        :handle_(handle)
     {
+        sock_stream_ = new ACE_SOCK_Stream(handle);
         read_stream_.reset(new CBufferredStream());
         write_stream_.reset(new CBufferredStream());
     }
-    TcpChannel ()
-        :handle_(0)
-    {
-
-    }
+   
     ~TcpChannel()
     {
+        close();
     }
 
     const std::string name() 
     {
-        std::ostringstream ss ; 
-        ss << "[Tcp channel] ["<< handle_ << "]"; 
+        std::ostringstream ss ;
+
+        assert(sock_stream_);
+        ss << "[Tcp channel] [" << sock_stream_->get_handle()  << "]"; 
         return ss.str();
     }
 
@@ -42,6 +41,22 @@ public:
     BufferedStreamRefPtr read_stream() 
     {
         return read_stream_;
+    }
+
+    ACE_HANDLE get_handle() 
+    {
+        ACE_HANDLE  handle = sock_stream_? sock_stream_->get_handle() : 0;
+        return handle;
+    }
+
+    void close() 
+    {
+        if (sock_stream_)
+        {
+            sock_stream_->close();
+            delete sock_stream_;
+            sock_stream_ = 0;
+        }
     }
 
     int handle_input( const char * data, size_t len) 
@@ -86,9 +101,9 @@ public:
     ///return: bytes that have sent,  negative (-1) if failed
     int send (const char * send_buff, size_t buff_size)
     {
-        ACE_SOCK_Stream stream (handle_);
+        assert(sock_stream_);
+        int rc = sock_stream_->send(send_buff , buff_size);
 
-        int rc = stream.send(send_buff , buff_size);
         if (rc < 0 ) 
         {
             if ( errno != EWOULDBLOCK)
@@ -118,10 +133,9 @@ public:
     {
         assert(recv_buff);
         assert(buff_size);
+        assert(sock_stream_);
 
-        ACE_SOCK_Stream stream (handle_);
-
-        int rc = stream.recv (recv_buff, buff_size);
+        int rc = sock_stream_->recv (recv_buff, buff_size);
         if (rc < 0) 
         {
             if ( errno != EWOULDBLOCK)
@@ -161,13 +175,20 @@ public:
         return 0;
     }
 
+
+private : 
+     TcpChannel ();
+     TcpChannel (const TcpChannel &);
+     TcpChannel & operator=(const TcpChannel&);
+
+     
 private: 
+    ACE_SOCK_Stream * sock_stream_;
+
     BufferedStreamRefPtr read_stream_; 
 
     BufferedStreamRefPtr write_stream_;
-  
-    ACE_HANDLE handle_;
-};
+ };
 
 typedef ACE_Refcounted_Auto_Ptr<TcpChannel, ACE_Null_Mutex> TcpChannelRefPtr; 
 
