@@ -82,6 +82,7 @@ private:
     char  * recv_buff_;
 
     std::list<ACE_HANDLE> req_close_handles_;
+
     bool stop_;
 };
 

@@ -2,10 +2,30 @@
 #include "tcp_server.h"
 #include "tcp_client.h"
 #include <iostream> 
+#include "app.h"
 
 using namespace std; 
 
-const int PACKET_SIZE = 100;
+class TestApp : public App 
+{
+    int init() 
+    {
+        return 0;
+    }
+
+    int fini()
+    {
+
+        return 0;
+    }
+};
+
+App * get_app() 
+{
+    static TestApp app ;
+    return &app;
+}
+
 
 class TelnetServer : public TcpServer 
 {
@@ -17,6 +37,7 @@ public:
     }
 };
 
+const int PACKET_SIZE = 100;
 
 class TestTcpClient : public TcpClient 
 {
@@ -101,9 +122,9 @@ public:
 int test_log() 
 {
 
-   // Logger::instance()->init(Logger::STD);
+    // Logger::instance()->init(Logger::STD);
 
-   // Logger::instance()->log(LL_TRACE, " hello ") ;
+    // Logger::instance()->log(LL_TRACE, " hello ") ;
 
     Logger::instance() ->init(Logger::FILESTREAM ,"log_test.txt", 1000);
 
@@ -111,16 +132,23 @@ int test_log()
     {
         LOG_OS(LL_TRACE, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
     }
-     
+
 
     return 0;
 }
-int
-    ACE_TMAIN (int argc, ACE_TCHAR *argv[])
+
+
+int ACE_TMAIN(int argc, ACE_TCHAR *argv[])
 {
-     // test_log();
+    return get_app()->main_i(argc, argv);
+}
+
+int
+    ACE_TMAIN_0 (int argc, ACE_TCHAR *argv[])
+{
+    // test_log();
     TestTcpServer server;
-    
+
     int rc= server.open("9999");
     assert (rc == 0);
     TestTcpClient client; 
