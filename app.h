@@ -3,6 +3,8 @@
 
 #include <string> 
 
+class CmdTask;
+
 class App
 {
 public :
@@ -22,11 +24,13 @@ public :
 private:
     std::string config_;
 
-    unsigned short port_;
+    std::string port_;
 
     bool daemon_;
 
     bool shutdown_;
+
+    CmdTask * cmd_task_;
 };
 
 #endif

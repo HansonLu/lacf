@@ -4,6 +4,8 @@
 #include "ace/Get_Opt.h"
 #include "ace/Thread_Manager.h"
 #include "log.h"
+#include "cmd_task.h"
+#include <iostream>
 
 App* get_app();
 
@@ -103,7 +105,7 @@ int App::main_i(int argc, char ** argv)
         switch (c)
     {
         case 'p':
-            this->port_ = ACE_OS::atoi (getopt.opt_arg ());
+            this->port_ = getopt.opt_arg ();
             break;
         case 'c':
             config_ = getopt.opt_arg ();
@@ -112,6 +114,13 @@ int App::main_i(int argc, char ** argv)
         case 'd':
             daemon_ = true;
             break;
+    }
+
+
+    if (port_.empty()) 
+    {
+        cerr << " App's port is invalid" << endl;
+        return -1;
     }
 
     if (daemon_)
@@ -123,6 +132,14 @@ int App::main_i(int argc, char ** argv)
 
     ACE::init();
 
+    cmd_task_ = new CmdTask(); 
+    if ( cmd_task_->open(port_.c_str() )!= 0) 
+    {
+        cerr << " open cmd port " << port_ << " failed!" << endl;
+        return -1;
+    }
+
+
     init();
 
     while (!shutdown_) 
@@ -131,10 +148,15 @@ int App::main_i(int argc, char ** argv)
     }
 
     fini();
+
+    cmd_task_->shutdown();
+
     ACE_Thread_Manager::instance()->wait();
     ACE::fini();
     LOG_INFO_OS("app exit ...");
 
+    delete cmd_task_;
+    cmd_task_ =0;
     return 0;
 }
 
