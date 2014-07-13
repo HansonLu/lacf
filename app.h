@@ -33,4 +33,5 @@ private:
     CmdTask * cmd_task_;
 };
 
+extern App * get_app() ;
 #endif
