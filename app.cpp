@@ -7,8 +7,6 @@
 #include "cmd_task.h"
 #include <iostream>
 
-App* get_app();
-
 using namespace std; 
 
 static void term_handler(int sig) 
